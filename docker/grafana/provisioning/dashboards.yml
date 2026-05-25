@@ -1,0 +1,14 @@
+# Grafana Dashboards Provisioning
+apiVersion: 1
+
+providers:
+  - name: 'Industrial Data Bridge'
+    orgId: 1
+    folder: 'IDB Dashboards'
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/dashboards
+      foldersFromFilesStructure: true

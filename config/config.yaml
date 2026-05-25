@@ -1,0 +1,261 @@
+# Industrial Data Bridge Configuration
+# This is the main configuration file for the bridge engine
+
+# Server configuration
+server:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  workers: 4
+  log_level: "INFO"
+  log_format: "json"
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:8080"
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 60
+    burst_limit: 10
+  metrics_interval: 30  # seconds
+  health_check_interval: 10  # seconds
+
+# Database configuration
+database:
+  host: "localhost"
+  port: 5432
+  database: "idb"
+  username: "idb_user"
+  password: "changeme"
+  pool_size: 20
+  max_overflow: 10
+  echo: false
+  ssl_mode: "prefer"
+  retry_attempts: 3
+  retry_delay: 1  # seconds
+
+# Redis configuration
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+  max_connections: 50
+  socket_timeout: 5  # seconds
+  socket_connect_timeout: 5  # seconds
+  retry_on_timeout: true
+  health_check_interval: 30  # seconds
+
+# InfluxDB configuration (for time-series data)
+influxdb:
+  host: "localhost"
+  port: 8086
+  org: "idb"
+  bucket: "device_metrics"
+  token: "changeme"
+  write_batch_size: 1000
+  flush_interval: 1  # seconds
+  retry_attempts: 3
+  retry_delay: 1  # seconds
+
+# MQTT configuration
+mqtt:
+  host: "localhost"
+  port: 1883
+  username: ""
+  password: ""
+  client_id: "idb-bridge"
+  keepalive: 60
+  qos: 1
+  clean_session: true
+  topics:
+    data: "idb/data/#"
+    commands: "idb/commands/#"
+    status: "idb/status/#"
+
+# Data collection configuration
+data_collection:
+  default_interval: 60  # seconds
+  max_retries: 3
+  retry_delay: 5  # seconds
+  timeout: 30  # seconds
+  batch_size: 100
+  cache_ttl: 300  # seconds
+  quality_check:
+    enabled: true
+    min_range: -999999
+    max_range: 999999
+    rate_of_change_limit: 1000  # per second
+    stale_timeout: 3600  # seconds
+
+# AI/ML configuration
+ai:
+  anomaly_detection:
+    method: "isolation_forest"
+    contamination: 0.1
+    n_estimators: 100
+    max_samples: "auto"
+    random_state: 42
+    training_samples_min: 1000
+    retrain_interval: 86400  # seconds (24 hours)
+  predictive_maintenance:
+    model_type: "xgboost"
+    n_estimators: 100
+    max_depth: 6
+    learning_rate: 0.1
+    early_stopping_rounds: 10
+    validation_split: 0.2
+  model_cache:
+    enabled: true
+    cache_dir: "./models"
+    max_cache_size_mb: 1000
+
+# Edge computing configuration
+edge:
+  enabled: true
+  sync_interval: 60  # seconds
+  max_local_storage_mb: 500
+  compression_enabled: true
+  encryption_enabled: false
+  priority_queues:
+    critical:
+      sync_interval: 5
+      max_retries: 5
+    high:
+      sync_interval: 30
+      max_retries: 3
+    medium:
+      sync_interval: 60
+      max_retries: 2
+    low:
+      sync_interval: 300
+      max_retries: 1
+
+# Protocol-specific configurations
+protocols:
+  modbus:
+    tcp:
+      timeout: 5.0
+      retries: 3
+      byte_order: "big"
+      word_order: "big"
+    rtu:
+      timeout: 3.0
+      retries: 3
+      baudrate: 9600
+      bytesize: 8
+      parity: "N"
+      stopbits: 1
+  opcua:
+    timeout: 10.0
+    retries: 2
+    security_mode: "None"
+    security_policy: "None"
+    subscription_interval: 1000  # milliseconds
+    queue_size: 1000
+  mqtt:
+    qos: 1
+    retain: false
+    last_will:
+      topic: "idb/bridge/status"
+      payload: "offline"
+      qos: 1
+      retain: true
+  http:
+    timeout: 10.0
+    retries: 3
+    verify_ssl: true
+    follow_redirects: true
+    max_redirects: 5
+
+# Security configuration
+security:
+  jwt:
+    secret_key: "change-this-in-production"
+    algorithm: "HS256"
+    access_token_expire_minutes: 30
+    refresh_token_expire_days: 7
+  api_keys:
+    enabled: true
+    rotation_days: 90
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 60
+    burst_limit: 10
+  cors:
+    enabled: true
+    allow_origins: ["*"]
+    allow_methods: ["*"]
+    allow_headers: ["*"]
+  ssl:
+    enabled: false
+    cert_path: ""
+    key_path: ""
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    port: 9090
+  health_checks:
+    enabled: true
+    interval: 30  # seconds
+  logging:
+    level: "INFO"
+    format: "json"
+    file_path: "./logs/idb.log"
+    max_size_mb: 100
+    backup_count: 5
+
+# Alerting configuration
+alerting:
+  enabled: true
+  webhooks:
+    - name: "slack"
+      url: ""
+      enabled: false
+    - name: "teams"
+      url: ""
+      enabled: false
+    - name: "email"
+      smtp_host: ""
+      smtp_port: 587
+      smtp_user: ""
+      smtp_password: ""
+      from_email: ""
+      enabled: false
+  rules:
+    - name: "device_offline"
+      condition: "status == 'offline'"
+      severity: "critical"
+      cooldown_seconds: 300
+    - name: "high_temperature"
+      condition: "temperature > 80"
+      severity: "warning"
+      cooldown_seconds: 60
+    - name: "anomaly_detected"
+      condition: "anomaly_score > 0.8"
+      severity: "warning"
+      cooldown_seconds: 300
+
+# Storage configuration
+storage:
+  data_retention_days: 90
+  archive_enabled: true
+  archive_retention_days: 365
+  compression_enabled: true
+  backup_enabled: true
+  backup_schedule: "0 2 * * *"  # Daily at 2 AM
+  backup_retention_days: 30
+
+# Development configuration (overrides in development mode)
+development:
+  debug: true
+  log_level: "DEBUG"
+  database:
+    echo: true
+  server:
+    reload: true
+  ai:
+    training_samples_min: 100
+    retrain_interval: 3600  # 1 hour for testing

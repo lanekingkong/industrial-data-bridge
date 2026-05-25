@@ -1,0 +1,50 @@
+# Legacy Pump Configuration for OPC-UA Server Example
+device:
+  name: "Legacy Water Pump"
+  id: "legacy_pump_001"
+  description: "Old Modbus RTU pump with no native OPC-UA support"
+
+modbus:
+  mode: rtu
+  port: /dev/ttyUSB0
+  baudrate: 9600
+  data_bits: 8
+  stop_bits: 1
+  parity: none
+  unit_id: 1
+  timeout: 2
+
+opcua:
+  server_endpoint: "opc.tcp://0.0.0.0:4840"
+  security_policy: None
+  allow_anonymous: true
+  namespace_uri: "http://industrialdatabridge.dev/opcua"
+
+nodes:
+  - node_id: "ns=2;s=TemperatureSensor"
+    name: "temperature"
+    data_type: "Float"
+    engineering_unit: "°C"
+    range: [0, 150]
+    
+  - node_id: "ns=2;s=PressureSensor"
+    name: "pressure"
+    data_type: "Float"
+    engineering_unit: "kPa"
+    range: [0, 1000]
+    
+  - node_id: "ns=2;s=FlowRateSensor"
+    name: "flow_rate"
+    data_type: "Float"
+    engineering_unit: "L/min"
+    range: [0, 500]
+    
+  - node_id: "ns=2;s=StatusRegister"
+    name: "status"
+    data_type: "Int32"
+    description: "Device status register"
+
+data_mapping:
+  ModbusRegister100: "TemperatureSensor"
+  ModbusRegister102: "PressureSensor"
+  ModbusRegister104: "FlowRateSensor"

@@ -1,0 +1,68 @@
+[project]
+name = "industrial-data-bridge"
+version = "1.0.0"
+description = "AI-powered industrial device data collection and protocol conversion solution"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Industrial Data Bridge Team", email = "team@industrial-data-bridge.org"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Manufacturing",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator",
+    "Topic :: System :: Hardware :: Hardware Drivers",
+]
+
+[project.urls]
+Homepage = "https://github.com/industrial-data-bridge/industrial-data-bridge"
+Documentation = "https://industrial-data-bridge.github.io/docs"
+Repository = "https://github.com/industrial-data-bridge/industrial-data-bridge.git"
+Issues = "https://github.com/industrial-data-bridge/industrial-data-bridge/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "flake8>=6.0",
+    "mypy>=1.0",
+    "pre-commit>=3.0",
+]
+ai = [
+    "scikit-learn>=1.3",
+    "tensorflow>=2.13",
+    "torch>=2.0",
+    "pandas>=2.0",
+    "numpy>=1.24",
+]
+edge = [
+    "onnxruntime>=1.15",
+    "opencv-python>=4.8",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=src --cov-report=term-missing"

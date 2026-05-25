@@ -1,0 +1,32 @@
+# Dockerfile for Device Gateway
+FROM python:3.11-slim
+
+ENV PYTHONFAULTHANDLER=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libsnappy-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Create non-root user
+RUN groupadd -r idb-gw && useradd -r -g idb-gw -s /bin/false idb-gw
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY src/ /app/src/
+COPY config/ /app/config/
+COPY --chown=idb-gw:idb-gw . .
+
+RUN chown -R idb-gw:idb-gw /app
+
+USER idb-gw
+
+EXPOSE 5020 4840
+
+ENTRYPOINT ["python", "-m", "src.main", "--gateway-mode"]

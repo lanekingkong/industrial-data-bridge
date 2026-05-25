@@ -1,0 +1,66 @@
+# Grafana Datasources Configuration
+# Industrial Data Bridge - Monitoring Stack
+
+apiVersion: 1
+
+datasources:
+  # InfluxDB - Main time-series database
+  - name: InfluxDB-Device-Metrics
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    jsonData:
+      version: Flux
+      organization: idb
+      defaultBucket: device_metrics
+      tlsSkipVerify: true
+    secureJsonData:
+      token: ${INFLUXDB_TOKEN}
+    editable: false
+    isDefault: true
+
+  # PostgreSQL - Metadata and configuration
+  - name: PostgreSQL-Metadata
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    user: idb_user
+    jsonData:
+      database: idb
+      sslmode: disable
+      maxOpenConns: 10
+      maxIdleConns: 5
+      connMaxLifetime: 14400
+    secureJsonData:
+      password: ${DB_PASSWORD}
+    editable: false
+
+  # Prometheus - System and application metrics
+  - name: Prometheus-Metrics
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    jsonData:
+      timeInterval: 15s
+      queryTimeout: 60s
+      httpMethod: POST
+    editable: false
+
+  # Redis - Cache metrics (via Redis Data Source plugin)
+  - name: Redis-Cache
+    type: redis-datasource
+    access: proxy
+    url: redis:6379
+    jsonData:
+      client: standalone
+      poolSize: 5
+      timeout: 10
+    secureJsonData:
+      password: ${REDIS_PASSWORD}
+    editable: false
+
+deleteDatasources:
+  - name: InfluxDB-Device-Metrics
+    orgId: 1
+  - name: PostgreSQL-Metadata
+    orgId: 1

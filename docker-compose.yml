@@ -1,0 +1,185 @@
+version: "3.8"
+
+services:
+  # ── Core Application ─────────────────────────
+  bridge-core:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: idb-core
+    ports:
+      - "${APP_PORT:-8000}:8000"
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      influxdb:
+        condition: service_started
+    volumes:
+      - ./config:/app/config:ro
+      - ./models:/app/models
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - bridge-net
+
+  # ── Device Gateway ───────────────────────────
+  device-gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gateway
+    container_name: idb-gateway
+    ports:
+      - "${MODBUS_DEFAULT_PORT:-5020}:5020"
+      - "4840:4840"   # OPC-UA
+    env_file: .env
+    depends_on:
+      - bridge-core
+    volumes:
+      - ./config:/app/config:ro
+    restart: unless-stopped
+    networks:
+      - bridge-net
+
+  # ── Edge Agent ───────────────────────────────
+  edge-agent:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.edge
+    container_name: idb-edge
+    env_file: .env
+    depends_on:
+      - bridge-core
+    volumes:
+      - edge-data:/data/edge
+      - ./config:/app/config:ro
+    restart: unless-stopped
+    networks:
+      - bridge-net
+
+  # ── PostgreSQL ───────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: idb-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-industrial_bridge}
+      POSTGRES_USER: ${POSTGRES_USER:-bridge_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bridge_user} -d ${POSTGRES_DB:-industrial_bridge}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - bridge-net
+
+  # ── Redis ────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: idb-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - bridge-net
+
+  # ── InfluxDB ─────────────────────────────────
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: idb-influxdb
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+      - ./docker/influxdb-init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_USER:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_PASSWORD:-changeme}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG:-industrial-bridge}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET:-device_telemetry}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN:-changeme}
+    restart: unless-stopped
+    networks:
+      - bridge-net
+
+  # ── MinIO (Object Storage) ───────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: idb-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-minioadmin}
+    restart: unless-stopped
+    networks:
+      - bridge-net
+
+  # ── Prometheus ───────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: idb-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    networks:
+      - bridge-net
+
+  # ── Grafana ──────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: idb-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-changeme}
+    depends_on:
+      - prometheus
+      - influxdb
+    restart: unless-stopped
+    networks:
+      - bridge-net
+
+networks:
+  bridge-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  influxdb-data:
+  minio-data:
+  prometheus-data:
+  grafana-data:
+  edge-data:

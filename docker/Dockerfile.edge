@@ -1,0 +1,41 @@
+# Dockerfile for Edge Agent
+FROM python:3.11-slim
+
+ENV PYTHONFAULTHANDLER=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libsnappy-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Create non-root user
+RUN groupadd -r idb-edge && useradd -r -g idb-edge -s /bin/false idb-edge
+
+# For ARM edge devices
+RUN pip install --no-cache-dir \
+    aiohttp \
+    pyserial \
+    pyModbusTCP \
+    # Add onnxruntime for edge AI
+    onnxruntime || echo "ONNX installation skipped (may not be available on this arch)"
+
+COPY requirements-edge.txt ./
+RUN pip install --no-cache-dir -r requirements-edge.txt
+
+COPY src/ /app/src/
+COPY --chown=idb-edge:idb-edge . .
+
+RUN chown -R idb-edge:idb-edge /app
+
+USER idb-edge
+
+ENV EDGE_MODE=1
+
+EXPOSE 8001
+
+ENTRYPOINT ["python", "-m", "src.main", "--edge-mode"]
